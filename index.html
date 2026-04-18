@@ -140,8 +140,8 @@ input,select{outline:none}
   #tab-bar{padding:.35rem .9rem}
 
   /* ホームページをフル画面に */
-  #p-home{
-    display:flex;flex-direction:column;
+  #p-home.on{
+    display:flex !important;flex-direction:column;
     height:calc(100vh - 110px); /* ヘッダー+タブ分を引く */
     overflow:hidden;
   }
@@ -448,13 +448,16 @@ function toast(msg){
 // =====================================================
 function goTab(id){
   var pages=['home','roster','members','settings'];
-  for(var i=0;i<pages.length;i++) document.getElementById('p-'+pages[i]).classList.remove('on');
-  document.getElementById('p-'+id).classList.add('on');
-  // タブレット時はホームをflexで表示
+  for(var i=0;i<pages.length;i++){
+    var el=document.getElementById('p-'+pages[i]);
+    el.classList.remove('on');
+    el.style.display='none';
+  }
+  var activeEl=document.getElementById('p-'+id);
+  activeEl.classList.add('on');
   var isTablet=window.innerWidth>=768;
-  var homeEl=document.getElementById('p-home');
-  if(id==='home'&&isTablet) homeEl.style.display='flex';
-  else if(id!=='home') homeEl.style.display='';
+  if(id==='home'&&isTablet) activeEl.style.display='flex';
+  else activeEl.style.display='block';
   var btns=document.querySelectorAll('.tb');
   for(var i=0;i<btns.length;i++) btns[i].classList.remove('on');
   var labels={home:'ホーム',roster:'会員',members:'メンバー',settings:'設定'};
