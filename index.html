@@ -208,6 +208,18 @@ input,select{outline:none}
 
 }
 
+/* タブレット横向き時は名前を小さく */
+@media(min-width:768px) and (orientation:landscape){
+  #p-home .tblock{
+    font-size:1.0rem !important;
+    line-height:1.3;
+  }
+  #p-home .vslbl{
+    font-size:1.0rem;
+    margin:.15rem 0;
+  }
+}
+
 /* 男性=黒・女性=赤（スマホ・タブレット共通） */
 .name-male{color:#1A1A1A !important;font-weight:800}
 .name-female{color:#D44040 !important;font-weight:800}
