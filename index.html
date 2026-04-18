@@ -229,7 +229,7 @@ input,select{outline:none}
 
 <div id="header">
   <div style="display:flex;align-items:center;gap:.4rem">
-    <span id="hcat"><img src="./img/face.png" class="cat-img" alt="にゃんこ"></span>
+    <span id="hcat"><img src="/nyanbad/img/face.png" class="cat-img" alt="にゃんこ"></span>
     <div><div class="app-name">にゃんバドミントン</div><div class="app-sub">対戦組み合わせアプリ</div></div>
   </div>
   <div id="hstats"></div>
@@ -238,7 +238,7 @@ input,select{outline:none}
 <div id="tab-bar">
   <button class="tb on" onclick="goTab('home')">🏠 ホーム</button>
   <button class="tb" onclick="goTab('roster')">📋 会員</button>
-  <button class="tb" onclick="goTab('members')"><img src="./img/face.png" class="cat-img-sm" style="margin-right:.2em" alt=""> メンバー</button>
+  <button class="tb" onclick="goTab('members')"><img src="/nyanbad/img/face.png" class="cat-img-sm" style="margin-right:.2em" alt=""> メンバー</button>
   <button class="tb" onclick="goTab('settings')">⚙️ 設定</button>
 </div>
 
@@ -249,7 +249,7 @@ input,select{outline:none}
     <div class="stitle">🐾 コート一覧</div>
     <div id="cgrid" class="cgrid"></div>
     <div id="free-sec" class="card" style="margin-bottom:.5rem">
-      <div style="font-weight:700;font-size:.8rem;color:var(--text-mid);margin-bottom:.35rem"><img src="./img/free.png" style="width:1.6em;height:1.6em;object-fit:contain;vertical-align:middle"> フリー待機中（<span id="fcnt">0</span>人）</div>
+      <div style="font-weight:700;font-size:.8rem;color:var(--text-mid);margin-bottom:.35rem"><img src="/nyanbad/img/free.png" style="width:1.6em;height:1.6em;object-fit:contain;vertical-align:middle"> フリー待機中（<span id="fcnt">0</span>人）</div>
       <div id="fchips" class="chips"></div>
     </div>
     <button class="btn bg bsm" onclick="resetAll()">🔄 全員フリーに戻す</button>
@@ -355,7 +355,7 @@ input,select{outline:none}
 
 </div>
 
-<div id="footer">🐾 にゃんバドミントン &nbsp;|&nbsp; 楽しく遊ぶにゃ〜 <img src="./img/face.png" style="width:1.4em;height:1.4em;object-fit:contain;vertical-align:middle"></div>
+<div id="footer">🐾 にゃんバドミントン &nbsp;|&nbsp; 楽しく遊ぶにゃ〜 <img src="/nyanbad/img/face.png" style="width:1.4em;height:1.4em;object-fit:contain;vertical-align:middle"></div>
 
 <div id="del-panel">
   <div id="del-box">
@@ -480,9 +480,9 @@ function goTab(id){
 // =====================================================
 // 描画
 // =====================================================
-var CAT_IMG={A:'./img/court_a.png',B:'./img/court_b.png',C:'./img/court_c.png',D:'./img/court_d.png'};
-var CAT_FACE='./img/face.png';
-var CAT_FREE='./img/free.png';
+var CAT_IMG={A:'/nyanbad/img/court_a.png',B:'/nyanbad/img/court_b.png',C:'/nyanbad/img/court_c.png',D:'/nyanbad/img/court_d.png'};
+var CAT_FACE='/nyanbad/img/face.png';
+var CAT_FREE='/nyanbad/img/free.png';
 var CAT={A:'🐱',B:'🐈',C:'🐈‍⬛',D:'😺'};
 
 function draw(){
@@ -516,7 +516,7 @@ function drawCourts(){
   if(MB.length<4){
     el.className='cgrid';
     el.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:2rem .8rem;background:var(--surface);border-radius:16px;border:2px dashed var(--border)">'
-      +'<div><img src="./img/good.png" style="width:4rem;height:4rem;object-fit:contain"></div>'
+      +'<div><img src="/nyanbad/img/good.png" style="width:4rem;height:4rem;object-fit:contain"></div>'
       +'<div style="font-weight:700;color:var(--text-mid);margin-top:.4rem">メンバーを4人以上登録するにゃ〜</div>'
       +'<button class="btn ba" style="margin-top:.75rem" onclick="goTab(\'members\')">🐾 追加する</button></div>';
     document.getElementById('free-sec').style.display='none';
@@ -625,7 +625,7 @@ function drawFree(){
 function drawRoster(){
   var el=document.getElementById('rlist');el.innerHTML='';
   if(RS.length===0){
-    el.innerHTML='<div style="text-align:center;padding:.9rem;color:var(--text-lt)"><img src="./img/good.png" style="width:2.5rem;height:2.5rem;object-fit:contain;vertical-align:middle"> まだ会員がいません</div>';
+    el.innerHTML='<div style="text-align:center;padding:.9rem;color:var(--text-lt)"><img src="/nyanbad/img/good.png" style="width:2.5rem;height:2.5rem;object-fit:contain;vertical-align:middle"> まだ会員がいません</div>';
     return;
   }
   // 参加者を上、欠席を下に表示
@@ -689,7 +689,7 @@ function drawRoster(){
 function drawMembers(){
   var el=document.getElementById('mlist');el.innerHTML='';
   if(MB.length===0){
-    el.innerHTML='<div style="text-align:center;padding:.9rem;color:var(--text-lt)"><img src="./img/good.png" style="width:2.5rem;height:2.5rem;object-fit:contain;vertical-align:middle"> まだメンバーがいません</div>';
+    el.innerHTML='<div style="text-align:center;padding:.9rem;color:var(--text-lt)"><img src="/nyanbad/img/good.png" style="width:2.5rem;height:2.5rem;object-fit:contain;vertical-align:middle"> まだメンバーがいません</div>';
     return;
   }
   for(var i=0;i<MB.length;i++){
