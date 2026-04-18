@@ -43,7 +43,7 @@ input,select{outline:none}
 .tb.on{background:var(--paw);border-color:var(--paw-dk);color:#fff}
 
 #main{flex:1;overflow-y:auto;padding:.55rem .65rem;-webkit-overflow-scrolling:touch}
-.page{display:none}.page.on{display:block}
+.page{display:none}.page.on{display:block}.hidden{display:none !important}
 .stitle{font-size:.85rem;font-weight:800;color:var(--paw-dk);display:flex;align-items:center;gap:.3rem;margin-bottom:.5rem}
 .card{background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:.75rem;margin-bottom:.55rem}
 
@@ -256,7 +256,7 @@ input,select{outline:none}
   </div>
 
   <!-- 会員一覧 -->
-  <div id="p-roster" class="page">
+  <div id="p-roster" class="page hidden">
     <div class="card">
       <div class="stitle">📋 会員登録</div>
       <div class="row" style="margin-bottom:.35rem">
@@ -295,7 +295,7 @@ input,select{outline:none}
   </div>
 
   <!-- メンバー -->
-  <div id="p-members" class="page">
+  <div id="p-members" class="page hidden">
     <div class="card">
       <div class="stitle">🐾 メンバー追加</div>
       <div class="row" style="margin-bottom:.35rem">
@@ -334,7 +334,7 @@ input,select{outline:none}
   </div>
 
   <!-- 設定 -->
-  <div id="p-settings" class="page">
+  <div id="p-settings" class="page hidden">
     <div class="card">
       <div class="stitle">🐾 セッション設定</div>
       <div style="margin-bottom:.8rem">
@@ -463,13 +463,11 @@ function goTab(id){
   for(var i=0;i<pages.length;i++){
     var el=document.getElementById('p-'+pages[i]);
     el.classList.remove('on');
-    el.style.display='none';
+    el.classList.add('hidden');
   }
   var activeEl=document.getElementById('p-'+id);
+  activeEl.classList.remove('hidden');
   activeEl.classList.add('on');
-  var isTablet=window.innerWidth>=768;
-  if(id==='home'&&isTablet) activeEl.style.display='flex';
-  else activeEl.style.display='block';
   var btns=document.querySelectorAll('.tb');
   for(var i=0;i<btns.length;i++) btns[i].classList.remove('on');
   var labels={home:'ホーム',roster:'会員',members:'メンバー',settings:'設定'};
