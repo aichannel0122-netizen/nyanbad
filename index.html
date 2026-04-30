@@ -240,6 +240,7 @@ input,select{outline:none}
   <button class="tb" onclick="goTab('roster')">📋 会員</button>
   <button class="tb" onclick="goTab('members')"><img src="/nyanbad/img/face.png" class="cat-img-sm" style="margin-right:.2em" alt=""> メンバー</button>
   <button class="tb" onclick="goTab('settings')">⚙️ 設定</button>
+    <button class="tb" onclick="goTab('history')">📋 履歴</button>
 </div>
 
 <div id="main">
@@ -354,6 +355,15 @@ input,select{outline:none}
   </div>
 
 </div>
+  <div id="p-history" class="page hidden">
+    <div class="sec">
+      <div class="sec-title">📋 対戦履歴（当日分）</div>
+      <div style="display:flex;justify-content:flex-end;margin-bottom:.5rem">
+        <button class="btn bd bsm" onclick="clearHistory()">🗑 履歴を消去</button>
+      </div>
+      <div id="hlist"></div>
+    </div>
+  </div>
 
 <div id="footer">🐾 にゃんバドミントン &nbsp;|&nbsp; 楽しく遊ぶにゃ〜 <img src="/nyanbad/img/face.png" style="width:1.4em;height:1.4em;object-fit:contain;vertical-align:middle"></div>
 
@@ -391,7 +401,7 @@ var COURT_LEVEL_LABELS={'all':'無差別','l0':'初心のみ','l01':'初心&初�
 // =====================================================
 // ストレージ
 // =====================================================
-var K={M:'nb9m',P:'nb9p',S:'nb9s',C:'nb9c',R:'nb9r'};
+var K={M:'nb9m',P:'nb9p',S:'nb9s',C:'nb9c',R:'nb9r',H:'nb9h',PH:'nb9ph'};
 function load(k,d){try{var v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}}
 function saveAll(){
   try{
@@ -400,6 +410,8 @@ function saveAll(){
     localStorage.setItem(K.S,JSON.stringify(SS));
     localStorage.setItem(K.C,JSON.stringify(PC));
     localStorage.setItem(K.R,JSON.stringify(RS));
+    localStorage.setItem(K.H,JSON.stringify(HIST));
+    localStorage.setItem(K.PH,JSON.stringify(PAIR_HIST));
   }catch(e){}
 }
 
@@ -407,6 +419,8 @@ var MB=load(K.M,[]);
 var FP=load(K.P,[]);
 var PC=load(K.C,{});
 var RS=load(K.R,[]); // 会員一覧
+var HIST=load(K.H,[]); // 対戦履歴（当日分）
+var PAIR_HIST=load(K.PH,{}); // ペア履歴 {pairKey: count}
 var SS=load(K.S,{
   n:2,
   courts:[
@@ -459,7 +473,7 @@ function toast(msg){
 // タブ
 // =====================================================
 function goTab(id){
-  var pages=['home','roster','members','settings'];
+  var pages=['home','roster','members','settings','history'];
   for(var i=0;i<pages.length;i++){
     var el=document.getElementById('p-'+pages[i]);
     el.classList.remove('on');
@@ -470,7 +484,7 @@ function goTab(id){
   activeEl.classList.add('on');
   var btns=document.querySelectorAll('.tb');
   for(var i=0;i<btns.length;i++) btns[i].classList.remove('on');
-  var labels={home:'ホーム',roster:'会員',members:'メンバー',settings:'設定'};
+  var labels={home:'ホーム',roster:'会員',members:'メンバー',history:'履歴',settings:'設定'};
   for(var i=0;i<btns.length;i++){
     if(btns[i].textContent.indexOf(labels[id])>=0) btns[i].classList.add('on');
   }
@@ -554,10 +568,10 @@ function drawCourts(){
     }else{
       da.className=c.ok?'':'pop-in';
       var b1=document.createElement('div');b1.className='tblock';
-      b1.appendChild(makeTeamEl(c.draw.t1));
+      b1.appendChild(makeTeamEl(c.draw.t1,c.id,1,c.ok));
       var vs=document.createElement('div');vs.className='vslbl';vs.textContent='VS';
       var b2=document.createElement('div');b2.className='tblock';
-      b2.appendChild(makeTeamEl(c.draw.t2));
+      b2.appendChild(makeTeamEl(c.draw.t2,c.id,2,c.ok));
       da.appendChild(b1);da.appendChild(vs);da.appendChild(b2);
     }
     card.appendChild(da);
@@ -581,21 +595,31 @@ function drawCourts(){
 
 function mkBtn(txt,cls){var b=document.createElement('button');b.className=cls;b.textContent=txt;return b;}
 
-// チーム表示（男女色分け対応）
-function makeTeamEl(team){
+// チーム表示（男女色分け対応・交代ボタン付き）
+function makeTeamEl(team,courtId,teamIdx,isConfirmed){
   var wrap=document.createElement('div');
   wrap.style.cssText='display:flex;flex-direction:column;align-items:center;gap:.1rem';
   for(var ti=0;ti<team.length;ti++){
-    var m=team[ti];
-    var line=document.createElement('div');
-    line.style.cssText='display:flex;align-items:center;gap:.3rem';
-    var icon=document.createElement('span');icon.textContent='🏸';
-    icon.style.fontSize='.85em';
-    var nm=document.createElement('span');
-    nm.textContent=m.name;
-    nm.className=m.gender==='male'?'name-male':'name-female';
-    line.appendChild(icon);line.appendChild(nm);
-    wrap.appendChild(line);
+    (function(memberIdx){
+      var m=team[memberIdx];
+      var line=document.createElement('div');
+      line.style.cssText='display:flex;align-items:center;gap:.3rem';
+      var icon=document.createElement('span');icon.textContent='🏸';
+      icon.style.fontSize='.85em';
+      var nm=document.createElement('span');
+      nm.textContent=m.name;
+      nm.className=m.gender==='male'?'name-male':'name-female';
+      line.appendChild(icon);line.appendChild(nm);
+      // 確定後は交代ボタンを表示
+      if(isConfirmed){
+        var swBtn=document.createElement('button');
+        swBtn.textContent='交代';
+        swBtn.style.cssText='font-size:.6rem;padding:.1rem .3rem;border-radius:4px;border:1px solid #ccc;background:#f0ebe4;cursor:pointer;color:#666;';
+        (function(ci,ti2,mi){swBtn.onclick=function(){doSwap(ci,ti2,mi);};})(courtId,teamIdx,memberIdx);
+        line.appendChild(swBtn);
+      }
+      wrap.appendChild(line);
+    })(ti);
   }
   // & 記号
   if(team.length===2){
@@ -653,6 +677,13 @@ function drawRoster(){
       var lv=document.createElement('span');lv.className='tag '+LEVEL_TAGS[member.level||0];
       lv.textContent=LEVELS[member.level||0];
       sub.appendChild(lv);
+      // レベル変更ドロップダウン
+      var rlsel=document.createElement('select');rlsel.className='inp inpsm';rlsel.style.cssText='width:auto;max-width:72px;margin-left:.3rem';
+      var rlopts=[['0','🌱初心'],['1','🔵初級'],['2','🟡中級'],['3','🔴上級']];
+      for(var rli=0;rli<rlopts.length;rli++){var rlo=document.createElement('option');rlo.value=rlopts[rli][0];rlo.textContent=rlopts[rli][1];if((member.level||0).toString()===rlopts[rli][0])rlo.selected=true;rlsel.appendChild(rlo);}
+      (function(mem){rlsel.onchange=function(){for(var ri=0;ri<RS.length;ri++){if(RS[ri].id===mem.id){RS[ri].level=parseInt(this.value);// MBにも反映
+      for(var mi=0;mi<MB.length;mi++){if(MB[mi].id===mem.id){MB[mi].level=RS[ri].level;break;}}break;}}saveAll();draw();toast('レベルを更新しました');};})(member);
+      sub.appendChild(rlsel);
       info.appendChild(sub);
       row.appendChild(info);
 
@@ -934,7 +965,7 @@ function setN(n){
 }
 
 // =====================================================
-// 抽選ロジック
+// 抽選ロジック（改善版）
 // =====================================================
 function shuffle(a){
   var r=a.slice();
@@ -942,22 +973,36 @@ function shuffle(a){
   return r;
 }
 
-function priorityShuffle(arr){
-  if(arr.length===0)return arr;
-  var groups={};
-  for(var i=0;i<arr.length;i++){var c=PC[arr[i].id]||0;if(!groups[c])groups[c]=[];groups[c].push(arr[i]);}
-  var counts=Object.keys(groups).map(Number).sort(function(a,b){return a-b});
-  var result=[];
-  for(var ci=0;ci<counts.length;ci++){var g=shuffle(groups[counts[ci]]);for(var gi=0;gi<g.length;gi++)result.push(g[gi]);}
-  return result;
-}
+// ペアキー生成（2人のIDをソートして結合）
+function pairKey(a,b){return [a,b].sort().join('|');}
 
+// 試合キー生成
 function mkKey(t1,t2){
   var s1=t1.slice().sort().join('|');var s2=t2.slice().sort().join('|');
   return [s1,s2].sort().join('||');
 }
 
-function pairAvgCount(pair){return((PC[pair[0].id]||0)+(PC[pair[1].id]||0))/2;}
+// ペアの過去組んだ回数を取得
+function getPairCount(a,b){return PAIR_HIST[pairKey(a.id,b.id)]||0;}
+
+// 固定ペア同士か判定
+function isFixedPair(a,b){
+  for(var i=0;i<FP.length;i++){if((FP[i][0]===a.id&&FP[i][1]===b.id)||(FP[i][0]===b.id&&FP[i][1]===a.id))return true;}
+  return false;
+}
+
+// 出場回数差チェック（最大3以内）
+function countOk(ids){
+  var counts=ids.map(function(id){return PC[id]||0;});
+  var allCounts=MB.map(function(m){return PC[m.id]||0;});
+  var allMax=Math.max.apply(null,allCounts);
+  var allMin=Math.min.apply(null,allCounts);
+  // 全体の最大と最小の差が3以上になる場合は、出場多い人を優先的に除外
+  for(var i=0;i<ids.length;i++){
+    if((PC[ids[i]]||0)===allMax&&allMax-allMin>=3)return false;
+  }
+  return true;
+}
 
 function genDraw(court){
   var clvInfo=COURT_LEVELS[court.clevel]||COURT_LEVELS['all'];
@@ -966,52 +1011,87 @@ function genDraw(court){
   for(var i=0;i<MB.length;i++){
     if(MB[i].status!=='free')continue;
     var lv=MB[i].level||0;var ok=false;
-    for(var li=0;li<allowedLevels.length;li++){if(allowedLevels[li]===lv){ok=true;break}}
+    for(var li=0;li<allowedLevels.length;li++){if(allowedLevels[li]===lv){ok=true;break;}}
     if(ok)free.push(MB[i]);
   }
   if(free.length<4)return null;
 
   var mode=court.mode;
   var lastKey=court.draw?court.draw.key:null;
-  var fixedUsed={};var fixedPairs2=[];
+
+  // 固定ペアを先に処理
+  var fixedUsed={};var fixedPairs=[];
   for(var fi=0;fi<FP.length;fi++){
     var fp=FP[fi];var pa=null,pb=null;
     for(var mi=0;mi<free.length;mi++){if(free[mi].id===fp[0])pa=free[mi];if(free[mi].id===fp[1])pb=free[mi];}
     if(!pa||!pb)continue;
     if(mode==='mixed'&&pa.gender===pb.gender)continue;
     if(fixedUsed[pa.id]||fixedUsed[pb.id])continue;
-    fixedPairs2.push([pa,pb]);fixedUsed[pa.id]=true;fixedUsed[pb.id]=true;
+    fixedPairs.push([pa,pb]);fixedUsed[pa.id]=true;fixedUsed[pb.id]=true;
   }
   var rem=free.filter(function(m){return!fixedUsed[m.id];});
-  var remPairs=[];
-  if(mode==='mixed'){
-    var males=[],females=[];
-    for(var mi2=0;mi2<rem.length;mi2++){if(rem[mi2].gender==='male')males.push(rem[mi2]);else females.push(rem[mi2]);}
-    males=priorityShuffle(males);females=priorityShuffle(females);
-    for(var xi=0;xi<Math.min(males.length,females.length);xi++) remPairs.push([males[xi],females[xi]]);
-  }else{
-    var r=priorityShuffle(rem);
-    for(var ri2=0;ri2+1<r.length;ri2+=2) remPairs.push([r[ri2],r[ri2+1]]);
-  }
-  var allPairPool=[];
-  for(var fpi=0;fpi<fixedPairs2.length;fpi++) allPairPool.push({pair:fixedPairs2[fpi],avg:pairAvgCount(fixedPairs2[fpi]),fixed:true});
-  for(var rpi=0;rpi<remPairs.length;rpi++) allPairPool.push({pair:remPairs[rpi],avg:pairAvgCount(remPairs[rpi]),fixed:false});
-  allPairPool.sort(function(a,b){
-    if(Math.abs(a.avg-b.avg)>0.01)return a.avg-b.avg;
-    if(a.fixed&&!b.fixed)return -1;if(!a.fixed&&b.fixed)return 1;
-    return Math.random()-.5;
-  });
-  if(allPairPool.length<2)return null;
-  var candLen=Math.min(allPairPool.length,4);
-  for(var att=0;att<40;att++){
-    var pickFrom=Math.min(2+Math.floor(att/8),candLen);
-    var cands=allPairPool.slice(0,pickFrom).map(function(x){return x.pair;});
-    var sp=shuffle(cands);if(sp.length<2)continue;
-    var p1=sp[0],p2=sp[1];
+
+  // ベストな組み合わせを探す（最大80回試行）
+  var best=null;var bestScore=999999;
+
+  for(var att=0;att<80;att++){
+    var remShuffled=shuffle(rem);
+    var remPairs=[];
+    if(mode==='mixed'){
+      var males=[],females=[];
+      for(var mi2=0;mi2<remShuffled.length;mi2++){
+        if(remShuffled[mi2].gender==='male')males.push(remShuffled[mi2]);
+        else females.push(remShuffled[mi2]);
+      }
+      males=shuffle(males);females=shuffle(females);
+      for(var xi=0;xi<Math.min(males.length,females.length);xi++)remPairs.push([males[xi],females[xi]]);
+    }else{
+      for(var ri=0;ri+1<remShuffled.length;ri+=2)remPairs.push([remShuffled[ri],remShuffled[ri+1]]);
+    }
+
+    var allPairs=fixedPairs.concat(remPairs);
+    if(allPairs.length<2)continue;
+
+    // ランダムに2ペア選ぶ
+    var shuffledPairs=shuffle(allPairs);
+    var p1=shuffledPairs[0],p2=shuffledPairs[1];
+
+    // 試合キー
     var mk=mkKey([p1[0].id,p1[1].id],[p2[0].id,p2[1].id]);
-    if(mk!==lastKey||att>25)return{t1:p1,t2:p2,key:mk};
+    if(mk===lastKey&&att<60)continue;
+
+    // 出場回数差チェック
+    var allIds=[p1[0].id,p1[1].id,p2[0].id,p2[1].id];
+    var allCounts=MB.map(function(m){return PC[m.id]||0;});
+    var globalMax=Math.max.apply(null,allCounts.concat([0]));
+    var globalMin=Math.min.apply(null,allCounts.concat([0]));
+    // 差が既に3以上なら出場多い人を避ける
+    if(globalMax-globalMin>=3){
+      var hasOverMax=false;
+      for(var ci=0;ci<allIds.length;ci++){if((PC[allIds[ci]]||0)>=globalMax)hasOverMax=true;}
+      if(hasOverMax&&att<50)continue;
+    }
+
+    // スコア計算（低いほど良い）
+    var score=0;
+    // 同じペア回数ペナルティ（最重要）
+    score+=getPairCount(p1[0],p1[1])*100;
+    score+=getPairCount(p2[0],p2[1])*100;
+    // 固定ペア同士が対戦するペナルティ
+    if(fixedPairs.length>=2){
+      var fp1isFixed=isFixedPair(p1[0],p1[1]);
+      var fp2isFixed=isFixedPair(p2[0],p2[1]);
+      if(fp1isFixed&&fp2isFixed)score+=200;
+    }
+    // 出場回数が多い人のペナルティ
+    for(var si=0;si<allIds.length;si++)score+=(PC[allIds[si]]||0)*2;
+    // ランダム要素
+    score+=Math.random()*30;
+
+    if(score<bestScore){bestScore=score;best={t1:p1,t2:p2,key:mk};}
   }
-  return null;
+
+  return best;
 }
 
 function getC(id){for(var i=0;i<SS.courts.length;i++) if(SS.courts[i].id===id) return SS.courts[i];return null}
@@ -1037,9 +1117,22 @@ function doConfirm(id){
   for(var i=0;i<c.draw.t2.length;i++) ids.push(c.draw.t2[i].id);
   c.ok=true;c.pids=ids;
   for(var i=0;i<ids.length;i++){
-    for(var mi=0;mi<MB.length;mi++){if(MB[mi].id===ids[i]){MB[mi].status='playing';break}}
+    for(var mi=0;mi<MB.length;mi++){if(MB[mi].id===ids[i]){MB[mi].status='playing';break;}}
     PC[ids[i]]=(PC[ids[i]]||0)+1;
   }
+  // ペア履歴を更新
+  var t1=c.draw.t1,t2=c.draw.t2;
+  if(t1.length===2){var pk1=pairKey(t1[0].id,t1[1].id);PAIR_HIST[pk1]=(PAIR_HIST[pk1]||0)+1;}
+  if(t2.length===2){var pk2=pairKey(t2[0].id,t2[1].id);PAIR_HIST[pk2]=(PAIR_HIST[pk2]||0)+1;}
+  // 対戦履歴に追加
+  var now=new Date();
+  var timeStr=(now.getHours()<10?'0':'')+now.getHours()+':'+(now.getMinutes()<10?'0':'')+now.getMinutes();
+  HIST.push({
+    courtName:c.name,
+    t1:c.draw.t1.map(function(m){return{name:m.name,gender:m.gender};}),
+    t2:c.draw.t2.map(function(m){return{name:m.name,gender:m.gender};}),
+    time:timeStr
+  });
   saveAll();draw();toast('✅ 試合確定！楽しんでにゃ🏸');
 }
 
@@ -1055,6 +1148,101 @@ function resetAll(){
   for(var i=0;i<MB.length;i++) MB[i].status='free';
   for(var i=0;i<SS.courts.length;i++){SS.courts[i].draw=null;SS.courts[i].ok=false;SS.courts[i].pids=[];}
   saveAll();draw();toast('🔄 全員フリーに戻しました');
+}
+
+// 確定後メンバー入れ替え
+function doSwap(courtId,teamIdx,memberIdx){
+  var c=getC(courtId);if(!c||!c.ok)return;
+  // フリーメンバー一覧でモーダル表示
+  var freeMB=MB.filter(function(m){return m.status==='free';});
+  if(freeMB.length===0){toast('フリーのメンバーがいません');return;}
+  // 対象メンバー
+  var team=teamIdx===1?c.draw.t1:c.draw.t2;
+  var target=team[memberIdx];
+  // 選択ダイアログを表示
+  var sel=document.getElementById('swap-modal');
+  if(sel)document.body.removeChild(sel);
+  var modal=document.createElement('div');
+  modal.id='swap-modal';
+  modal.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  var box=document.createElement('div');
+  box.style.cssText='background:#fff;border-radius:12px;padding:1rem;width:85%;max-width:320px;';
+  var title=document.createElement('div');
+  title.style.cssText='font-weight:800;margin-bottom:.7rem;font-size:.95rem;';
+  title.textContent='「'+target.name+'」と交代するメンバーを選択';
+  box.appendChild(title);
+  for(var i=0;i<freeMB.length;i++){
+    (function(fm){
+      var btn=document.createElement('button');
+      btn.style.cssText='display:block;width:100%;text-align:left;padding:.5rem .7rem;margin-bottom:.3rem;border-radius:8px;border:1px solid #ddd;background:#f9f6f2;cursor:pointer;font-size:.9rem;';
+      btn.style.color=fm.gender==='female'?'#D44040':'#1A1A1A';
+      btn.textContent=(fm.gender==='male'?'♂':'♀')+' '+fm.name;
+      btn.onclick=function(){
+        // 入れ替え実行
+        fm.status='playing';target.status='free';
+        // team配列を更新
+        var targetTeam=teamIdx===1?c.draw.t1:c.draw.t2;
+        targetTeam[memberIdx]=fm;
+        // pidsを更新
+        var newPids=[];
+        for(var pi=0;pi<c.draw.t1.length;pi++)newPids.push(c.draw.t1[pi].id);
+        for(var pi2=0;pi2<c.draw.t2.length;pi2++)newPids.push(c.draw.t2[pi2].id);
+        c.pids=newPids;
+        // MBのステータスを更新
+        for(var mi=0;mi<MB.length;mi++){
+          if(MB[mi].id===fm.id)MB[mi].status='playing';
+          if(MB[mi].id===target.id)MB[mi].status='free';
+        }
+        document.body.removeChild(modal);
+        saveAll();draw();toast('✅ '+target.name+'→'+fm.name+' に交代しました');
+      };
+      box.appendChild(btn);
+    })(freeMB[i]);
+  }
+  var cancel=document.createElement('button');
+  cancel.style.cssText='width:100%;padding:.5rem;margin-top:.3rem;border-radius:8px;border:1px solid #ddd;background:#eee;cursor:pointer;';
+  cancel.textContent='キャンセル';
+  cancel.onclick=function(){document.body.removeChild(modal);};
+  box.appendChild(cancel);
+  modal.appendChild(box);
+  document.body.appendChild(modal);
+}
+
+// 履歴描画
+function drawHistory(){
+  var el=document.getElementById('hlist');if(!el)return;el.innerHTML='';
+  if(HIST.length===0){
+    el.innerHTML='<div style="text-align:center;padding:1rem;color:#aaa">まだ対戦履歴がありません</div>';return;
+  }
+  // 新しい順に表示
+  for(var i=HIST.length-1;i>=0;i--){
+    (function(h,num){
+      var card=document.createElement('div');
+      card.style.cssText='background:#fff;border-radius:10px;padding:.7rem .9rem;margin-bottom:.5rem;border:1px solid #e8ddd0;';
+      var head=document.createElement('div');
+      head.style.cssText='display:flex;justify-content:space-between;font-size:.75rem;color:#aaa;margin-bottom:.4rem;';
+      head.innerHTML='<span>第'+(num)+'試合 '+h.courtName+'</span><span>'+h.time+'</span>';
+      card.appendChild(head);
+      var body=document.createElement('div');
+      body.style.cssText='display:flex;align-items:center;justify-content:center;gap:.5rem;font-size:.85rem;font-weight:700;';
+      function teamStr(team){
+        return team.map(function(m){
+          var c=m.gender==='female'?'#D44040':'#1A1A1A';
+          return '<span style="color:'+c+'">'+m.name+'</span>';
+        }).join('<span style="color:#aaa"> & </span>');
+      }
+      body.innerHTML=teamStr(h.t1)+'<span style="color:#E8956D;font-size:.8rem;padding:0 .3rem">VS</span>'+teamStr(h.t2);
+      card.appendChild(body);
+      el.appendChild(card);
+    })(HIST[i],i+1);
+  }
+}
+
+function clearHistory(){
+  if(HIST.length===0){toast('履歴がありません');return;}
+  askDel('対戦履歴を全て消去しますか？',function(){
+    HIST=[];PAIR_HIST={};saveAll();drawHistory();toast('🗑 履歴を消去しました');
+  });
 }
 
 function resetCount(){PC={};saveAll();draw();toast('🔄 出場回数をリセットしました')}
