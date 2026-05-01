@@ -1032,69 +1032,108 @@ function genDraw(court){
   var globalMin=allCounts.length>0?Math.min.apply(null,allCounts):0;
   var countGap=globalMax-globalMin;
 
-  // 全員フラットに扱いペアを生成して最良の試合を選ぶ
-  // 固定ペアは「ペア編成のスコアを良くする」ことで優先されるが出場回数で制御
+  // 固定ペアをfrееから抽出（両者がフリーにいる場合のみ）
+  // 出場回数差が3以上でも固定ペアは原則維持（均等化より固定ペア優先）
+  var freeIds={};
+  for(var i=0;i<free.length;i++)freeIds[free[i].id]=free[i];
+
+  var availFixedPairs=[]; // フリーにいる固定ペアのリスト
+  var fixedMemberIds={}; // 固定ペアに属するメンバーID
+  for(var fi=0;fi<FP.length;fi++){
+    var idA=FP[fi][0],idB=FP[fi][1];
+    if(!freeIds[idA]||!freeIds[idB])continue;
+    if(mode==='mixed'&&freeIds[idA].gender===freeIds[idB].gender)continue;
+    availFixedPairs.push([freeIds[idA],freeIds[idB]]);
+    fixedMemberIds[idA]=true;fixedMemberIds[idB]=true;
+  }
+
+  // 固定ペア以外のフリーメンバー
+  var nonFixedFree=free.filter(function(m){return!fixedMemberIds[m.id];});
+
   var best=null;var bestScore=999999;
 
   for(var att=0;att<100;att++){
-    var shuffled=shuffle(free);
 
-    // ペアを生成
-    var pairs=[];
+    // Step1: 固定ペアをシャッフル
+    var shuffledFixed=shuffle(availFixedPairs);
+
+    // Step2: 固定ペア以外からランダムにペアを生成
+    var nonFixedShuffled=shuffle(nonFixedFree);
+    var nonFixedPairs=[];
     if(mode==='mixed'){
       var males=[],females=[];
-      for(var i=0;i<shuffled.length;i++){
-        if(shuffled[i].gender==='male')males.push(shuffled[i]);
-        else females.push(shuffled[i]);
+      for(var i=0;i<nonFixedShuffled.length;i++){
+        if(nonFixedShuffled[i].gender==='male')males.push(nonFixedShuffled[i]);
+        else females.push(nonFixedShuffled[i]);
       }
-      males=shuffle(males);females=shuffle(females);
       for(var xi=0;xi<Math.min(males.length,females.length);xi++)
-        pairs.push([males[xi],females[xi]]);
+        nonFixedPairs.push([males[xi],females[xi]]);
     }else{
-      for(var ri=0;ri+1<shuffled.length;ri+=2)
-        pairs.push([shuffled[ri],shuffled[ri+1]]);
+      for(var ri=0;ri+1<nonFixedShuffled.length;ri+=2)
+        nonFixedPairs.push([nonFixedShuffled[ri],nonFixedShuffled[ri+1]]);
     }
 
-    if(pairs.length<2)continue;
+    // Step3: 固定ペアを優先して2ペアを決める
+    // 固定ペアが1組以上ある → 固定ペア1組 + もう1組（固定or通常）
+    // 固定ペアが0組 → 通常から2組
+    var allCandidates=shuffledFixed.concat(nonFixedPairs);
+    if(allCandidates.length<2)continue;
 
-    // 全ペアの組み合わせから最良の2ペアを選ぶ
-    // ペア数が多い時は先頭からランダムに2ペアを選ぶ
-    var shuffledPairs=shuffle(pairs);
-    var p1=shuffledPairs[0];
-    var p2=shuffledPairs[1];
+    var p1,p2;
 
-    // 試合キー（直前と同じ対戦は避ける）
+    if(shuffledFixed.length>=1){
+      // 固定ペアを1組必ず使う（出場回数が多すぎる場合は例外）
+      var fp=shuffledFixed[0];
+      var fpTooMany=(countGap>=3&&att<60&&
+        ((PC[fp[0].id]||0)>=globalMax||(PC[fp[1].id]||0)>=globalMax));
+
+      if(fpTooMany){
+        // 出場過多の場合は固定ペアを外して通常から選ぶ
+        if(nonFixedPairs.length<2)continue;
+        var nfShuf=shuffle(nonFixedPairs);
+        p1=nfShuf[0];p2=nfShuf[1];
+      }else{
+        p1=fp;
+        // p2: 固定ペア2組目があれば使う、なければ通常から
+        var p2pool=[];
+        // 固定ペアの2組目（p1と被らない）
+        for(var fj=1;fj<shuffledFixed.length;fj++){
+          var fpj=shuffledFixed[fj];
+          if(fpj[0].id!==p1[0].id&&fpj[0].id!==p1[1].id&&
+             fpj[1].id!==p1[0].id&&fpj[1].id!==p1[1].id)
+            p2pool.push({pair:fpj,isFixed:true});
+        }
+        // 通常ペア
+        for(var nj=0;nj<nonFixedPairs.length;nj++){
+          var nfp=nonFixedPairs[nj];
+          if(nfp[0].id!==p1[0].id&&nfp[0].id!==p1[1].id&&
+             nfp[1].id!==p1[0].id&&nfp[1].id!==p1[1].id)
+            p2pool.push({pair:nfp,isFixed:false});
+        }
+        if(p2pool.length===0)continue;
+        // p2poolからランダムに選ぶ
+        p2=p2pool[Math.floor(Math.random()*p2pool.length)].pair;
+      }
+    }else{
+      // 固定ペアなし：通常から2組
+      if(nonFixedPairs.length<2)continue;
+      var nfShuf2=shuffle(nonFixedPairs);
+      p1=nfShuf2[0];p2=nfShuf2[1];
+    }
+
+    // 連続同一試合を避ける
     var mk=mkKey([p1[0].id,p1[1].id],[p2[0].id,p2[1].id]);
     if(mk===lastKey&&att<70)continue;
 
-    var allIds=[p1[0].id,p1[1].id,p2[0].id,p2[1].id];
-
-    // 出場回数差が3以上の時、出場多い人を50回目まで避ける
-    if(countGap>=3&&att<50){
-      var hasMax=false;
-      for(var oi=0;oi<allIds.length;oi++){
-        if((PC[allIds[oi]]||0)>=globalMax){hasMax=true;break;}
-      }
-      if(hasMax)continue;
-    }
-
-    // スコア計算（低いほど良い）
+    // スコア計算
     var score=0;
-
-    // 同じペア回数ペナルティ（最重要：同じペアになりにくく）
-    score+=getPairCount(p1[0],p1[1])*300;
+    score+=getPairCount(p1[0],p1[1])*300; // 同じペア回避
     score+=getPairCount(p2[0],p2[1])*300;
-
-    // 固定ペアが正しく組まれているとボーナス（固定ペアの出場を促進）
-    if(isFixedPair(p1[0],p1[1]))score-=80;
-    if(isFixedPair(p2[0],p2[1]))score-=80;
-
     // 固定ペア同士の対戦ペナルティ（避けるが絶対NGではない）
-    if(isFixedPair(p1[0],p1[1])&&isFixedPair(p2[0],p2[1]))score+=150;
-
-    // 出場回数が多い人ほどペナルティ（均等化）
+    if(isFixedPair(p1[0],p1[1])&&isFixedPair(p2[0],p2[1]))score+=200;
+    // 出場回数均等化
+    var allIds=[p1[0].id,p1[1].id,p2[0].id,p2[1].id];
     for(var si=0;si<allIds.length;si++)score+=(PC[allIds[si]]||0)*5;
-
     // ランダム要素
     score+=Math.random()*50;
 
