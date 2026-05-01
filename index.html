@@ -1012,6 +1012,8 @@ function countOk(ids){
 function genDraw(court){
   var clvInfo=COURT_LEVELS[court.clevel]||COURT_LEVELS['all'];
   var allowedLevels=clvInfo.levels;
+
+  // フリーかつレベル条件を満たすメンバーを抽出
   var free=[];
   for(var i=0;i<MB.length;i++){
     if(MB[i].status!=='free')continue;
@@ -1024,87 +1026,83 @@ function genDraw(court){
   var mode=court.mode;
   var lastKey=court.draw?court.draw.key:null;
 
-  // 固定ペアを先に処理（出場回数が多すぎる場合は通常ペアとして扱う）
-  var allCounts0=MB.map(function(m){return PC[m.id]||0;});
-  var globalMax0=allCounts0.length>0?Math.max.apply(null,allCounts0):0;
-  var globalMin0=allCounts0.length>0?Math.min.apply(null,allCounts0):0;
-  var fixedUsed={};var fixedPairs=[];
-  for(var fi=0;fi<FP.length;fi++){
-    var fp=FP[fi];var pa=null,pb=null;
-    for(var mi=0;mi<free.length;mi++){if(free[mi].id===fp[0])pa=free[mi];if(free[mi].id===fp[1])pb=free[mi];}
-    if(!pa||!pb)continue;
-    if(mode==='mixed'&&pa.gender===pb.gender)continue;
-    if(fixedUsed[pa.id]||fixedUsed[pb.id])continue;
-    // 出場回数差が3以上なら固定でも強制はしない
-    var paCount=PC[pa.id]||0;var pbCount=PC[pb.id]||0;
-    if(globalMax0-globalMin0>=3&&(paCount>=globalMax0||pbCount>=globalMax0))continue;
-    fixedPairs.push([pa,pb]);fixedUsed[pa.id]=true;fixedUsed[pb.id]=true;
-  }
-  var rem=free.filter(function(m){return!fixedUsed[m.id];});
+  // 全体の出場回数
+  var allCounts=MB.map(function(m){return PC[m.id]||0;});
+  var globalMax=allCounts.length>0?Math.max.apply(null,allCounts):0;
+  var globalMin=allCounts.length>0?Math.min.apply(null,allCounts):0;
+  var countGap=globalMax-globalMin;
 
-  // ベストな組み合わせを探す（最大80回試行）
+  // 全員フラットに扱いペアを生成して最良の試合を選ぶ
+  // 固定ペアは「ペア編成のスコアを良くする」ことで優先されるが出場回数で制御
   var best=null;var bestScore=999999;
 
-  for(var att=0;att<80;att++){
-    var remShuffled=shuffle(rem);
-    var remPairs=[];
+  for(var att=0;att<100;att++){
+    var shuffled=shuffle(free);
+
+    // ペアを生成
+    var pairs=[];
     if(mode==='mixed'){
       var males=[],females=[];
-      for(var mi2=0;mi2<remShuffled.length;mi2++){
-        if(remShuffled[mi2].gender==='male')males.push(remShuffled[mi2]);
-        else females.push(remShuffled[mi2]);
+      for(var i=0;i<shuffled.length;i++){
+        if(shuffled[i].gender==='male')males.push(shuffled[i]);
+        else females.push(shuffled[i]);
       }
       males=shuffle(males);females=shuffle(females);
-      for(var xi=0;xi<Math.min(males.length,females.length);xi++)remPairs.push([males[xi],females[xi]]);
+      for(var xi=0;xi<Math.min(males.length,females.length);xi++)
+        pairs.push([males[xi],females[xi]]);
     }else{
-      for(var ri=0;ri+1<remShuffled.length;ri+=2)remPairs.push([remShuffled[ri],remShuffled[ri+1]]);
+      for(var ri=0;ri+1<shuffled.length;ri+=2)
+        pairs.push([shuffled[ri],shuffled[ri+1]]);
     }
 
-    var allPairs=fixedPairs.concat(remPairs);
-    if(allPairs.length<2)continue;
+    if(pairs.length<2)continue;
 
-    // ランダムに2ペア選ぶ
-    var shuffledPairs=shuffle(allPairs);
-    var p1=shuffledPairs[0],p2=shuffledPairs[1];
+    // 全ペアの組み合わせから最良の2ペアを選ぶ
+    // ペア数が多い時は先頭からランダムに2ペアを選ぶ
+    var shuffledPairs=shuffle(pairs);
+    var p1=shuffledPairs[0];
+    var p2=shuffledPairs[1];
 
-    // 試合キー
+    // 試合キー（直前と同じ対戦は避ける）
     var mk=mkKey([p1[0].id,p1[1].id],[p2[0].id,p2[1].id]);
-    if(mk===lastKey&&att<60)continue;
+    if(mk===lastKey&&att<70)continue;
 
-    // 出場回数差チェック
     var allIds=[p1[0].id,p1[1].id,p2[0].id,p2[1].id];
-    var allCounts=MB.map(function(m){return PC[m.id]||0;});
-    var globalMax=Math.max.apply(null,allCounts.concat([0]));
-    var globalMin=Math.min.apply(null,allCounts.concat([0]));
-    // 差が既に3以上なら出場多い人を避ける
-    if(globalMax-globalMin>=3){
-      var hasOverMax=false;
-      for(var ci=0;ci<allIds.length;ci++){if((PC[allIds[ci]]||0)>=globalMax)hasOverMax=true;}
-      if(hasOverMax&&att<50)continue;
+
+    // 出場回数差が3以上の時、出場多い人を50回目まで避ける
+    if(countGap>=3&&att<50){
+      var hasMax=false;
+      for(var oi=0;oi<allIds.length;oi++){
+        if((PC[allIds[oi]]||0)>=globalMax){hasMax=true;break;}
+      }
+      if(hasMax)continue;
     }
 
     // スコア計算（低いほど良い）
     var score=0;
-    // 同じペア回数ペナルティ（最重要）
-    score+=getPairCount(p1[0],p1[1])*100;
-    score+=getPairCount(p2[0],p2[1])*100;
-    // 固定ペア同士が対戦するペナルティ
-    if(fixedPairs.length>=2){
-      var fp1isFixed=isFixedPair(p1[0],p1[1]);
-      var fp2isFixed=isFixedPair(p2[0],p2[1]);
-      if(fp1isFixed&&fp2isFixed)score+=200;
-    }
-    // 出場回数が多い人のペナルティ
-    for(var si=0;si<allIds.length;si++)score+=(PC[allIds[si]]||0)*2;
+
+    // 同じペア回数ペナルティ（最重要：同じペアになりにくく）
+    score+=getPairCount(p1[0],p1[1])*300;
+    score+=getPairCount(p2[0],p2[1])*300;
+
+    // 固定ペアが正しく組まれているとボーナス（固定ペアの出場を促進）
+    if(isFixedPair(p1[0],p1[1]))score-=80;
+    if(isFixedPair(p2[0],p2[1]))score-=80;
+
+    // 固定ペア同士の対戦ペナルティ（避けるが絶対NGではない）
+    if(isFixedPair(p1[0],p1[1])&&isFixedPair(p2[0],p2[1]))score+=150;
+
+    // 出場回数が多い人ほどペナルティ（均等化）
+    for(var si=0;si<allIds.length;si++)score+=(PC[allIds[si]]||0)*5;
+
     // ランダム要素
-    score+=Math.random()*30;
+    score+=Math.random()*50;
 
     if(score<bestScore){bestScore=score;best={t1:p1,t2:p2,key:mk};}
   }
 
   return best;
 }
-
 function getC(id){for(var i=0;i<SS.courts.length;i++) if(SS.courts[i].id===id) return SS.courts[i];return null}
 
 function doDraw(id){
