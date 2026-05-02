@@ -336,6 +336,13 @@ input,select{outline:none}
 
   <!-- 設定 -->
   <div id="p-settings" class="page hidden">
+    <div class="card" style="margin-bottom:.7rem">
+      <div class="stitle">🔊 読み上げ設定</div>
+      <div style="display:flex;align-items:center;gap:.8rem;margin-top:.4rem">
+        <span style="font-size:.88rem;font-weight:700">確定時に読み上げ</span>
+        <button id="speech-toggle" onclick="toggleSpeech()" style="padding:.3rem .9rem;border-radius:999px;border:2px solid var(--paw);font-weight:700;font-size:.82rem;cursor:pointer;background:var(--surface)">OFF</button>
+      </div>
+    </div>
     <div class="card">
       <div class="stitle">🐾 セッション設定</div>
       <div style="margin-bottom:.8rem">
@@ -421,6 +428,7 @@ var PC=load(K.C,{});
 var RS=load(K.R,[]); // 会員一覧
 var HIST=load(K.H,[]); // 対戦履歴（当日分）
 var PAIR_HIST=load(K.PH,{}); // ペア履歴 {pairKey: count}
+var SPEECH_ON=localStorage.getItem('nb9sp')==='1'; // 読み上げON/OFF
 var SS=load(K.S,{
   n:2,
   courts:[
@@ -1182,6 +1190,7 @@ function doConfirm(id){
     time:timeStr
   });
   saveAll();draw();toast('✅ 試合確定！楽しんでにゃ🏸');
+  speakCourt(c.name,c.draw.t1,c.draw.t2);
 }
 
 function doFinish(id){
@@ -1294,6 +1303,42 @@ function clearHistory(){
 }
 
 function resetCount(){PC={};saveAll();draw();toast('🔄 出場回数をリセットしました')}
+
+// 読み上げON/OFF切り替え
+function toggleSpeech(){
+  SPEECH_ON=!SPEECH_ON;
+  localStorage.setItem('nb9sp',SPEECH_ON?'1':'0');
+  updateSpeechBtn();
+  toast(SPEECH_ON?'🔊 読み上げONにしました':'🔇 読み上げOFFにしました');
+}
+
+function updateSpeechBtn(){
+  var btn=document.getElementById('speech-toggle');
+  if(!btn)return;
+  if(SPEECH_ON){
+    btn.textContent='ON';
+    btn.style.background='var(--paw)';
+    btn.style.color='#fff';
+  }else{
+    btn.textContent='OFF';
+    btn.style.background='var(--surface)';
+    btn.style.color='var(--text)';
+  }
+}
+
+// 音声読み上げ
+function speakCourt(courtName,t1,t2){
+  if(!SPEECH_ON)return;
+  if(!window.speechSynthesis)return;
+  window.speechSynthesis.cancel();
+  var t1names=t1.map(function(m){return m.name;}).join('、');
+  var t2names=t2.map(function(m){return m.name;}).join('、');
+  var text=courtName+'、'+t1names+'、対、'+t2names;
+  var utt=new SpeechSynthesisUtterance(text);
+  utt.lang='ja-JP';
+  utt.rate=0.9;
+  window.speechSynthesis.speak(utt);
+}
 
 if('serviceWorker' in navigator){
   window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});
