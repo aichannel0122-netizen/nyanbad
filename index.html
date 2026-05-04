@@ -229,7 +229,7 @@ input,select{outline:none}
 
 <div id="header">
   <div style="display:flex;align-items:center;gap:.4rem">
-    <span id="hcat"><img src="/nyanbad/img/face.png" class="cat-img" alt="にゃんこ"></span>
+    <span id="hcat"><img src="./img/face.png" class="cat-img" alt="にゃんこ"></span>
     <div><div class="app-name">にゃんバドミントン</div><div class="app-sub">対戦組み合わせアプリ</div></div>
   </div>
   <div id="hstats"></div>
@@ -250,7 +250,7 @@ input,select{outline:none}
     <div class="stitle">🐾 コート一覧</div>
     <div id="cgrid" class="cgrid"></div>
     <div id="free-sec" class="card" style="margin-bottom:.5rem">
-      <div style="font-weight:700;font-size:.8rem;color:var(--text-mid);margin-bottom:.35rem"><img src="/nyanbad/img/free.png" style="width:1.6em;height:1.6em;object-fit:contain;vertical-align:middle"> フリー待機中（<span id="fcnt">0</span>人）</div>
+      <div style="font-weight:700;font-size:.8rem;color:var(--text-mid);margin-bottom:.35rem"><img src="./img/free.png" style="width:1.6em;height:1.6em;object-fit:contain;vertical-align:middle"> フリー待機中（<span id="fcnt">0</span>人）</div>
       <div id="fchips" class="chips"></div>
     </div>
     <button class="btn bg bsm" onclick="resetAll()">🔄 全員フリーに戻す</button>
@@ -298,27 +298,12 @@ input,select{outline:none}
   <!-- メンバー -->
   <div id="p-members" class="page hidden">
     <div class="card">
-      <div class="stitle">🐾 メンバー追加</div>
-      <div class="row" style="margin-bottom:.35rem">
-        <input class="inp" id="iname" placeholder="名前（最大12文字）" maxlength="12" style="flex:2 1 110px" onkeydown="if(event.key==='Enter')addMember()">
-        <select class="inp" id="igender" style="flex:1 1 75px;width:auto">
-          <option value="male">♂ 男性</option>
-          <option value="female">♀ 女性</option>
-        </select>
-        <select class="inp" id="ilevel" style="flex:1 1 80px;width:auto">
-          <option value="0">🌱 初心</option>
-          <option value="1">🔵 初級</option>
-          <option value="2">🟡 中級</option>
-          <option value="3">🔴 上級</option>
-        </select>
-        <button class="btn ba bsm" onclick="addMember()">🐾 追加</button>
-      </div>
-      <div style="font-size:.68rem;color:var(--text-lt)">登録数: <span id="mcnt">0</span> / 40人</div>
+      <div style="font-size:.8rem;color:var(--text-mid);padding:.3rem 0">メンバーは「会員」タブで管理できます</div>
     </div>
     <div class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem">
         <div class="stitle" style="margin-bottom:0">🐾 メンバー一覧</div>
-        <button class="btn bd bxs" onclick="askDeleteAll()">🗑 全員削除</button>
+
       </div>
       <div id="mlist"></div>
     </div>
@@ -372,7 +357,7 @@ input,select{outline:none}
     </div>
   </div>
 
-<div id="footer">🐾 にゃんバドミントン &nbsp;|&nbsp; 楽しく遊ぶにゃ〜 <img src="/nyanbad/img/face.png" style="width:1.4em;height:1.4em;object-fit:contain;vertical-align:middle"></div>
+<div id="footer">🐾 にゃんバドミントン &nbsp;|&nbsp; 楽しく遊ぶにゃ〜 <img src="./img/face.png" style="width:1.4em;height:1.4em;object-fit:contain;vertical-align:middle"></div>
 
 <div id="del-panel">
   <div id="del-box">
@@ -419,6 +404,7 @@ function saveAll(){
     localStorage.setItem(K.R,JSON.stringify(RS));
     localStorage.setItem(K.H,JSON.stringify(HIST));
     localStorage.setItem(K.PH,JSON.stringify(PAIR_HIST));
+    localStorage.setItem('nb9sk',JSON.stringify(SKIP_CNT));
   }catch(e){}
 }
 
@@ -428,6 +414,7 @@ var PC=load(K.C,{});
 var RS=load(K.R,[]); // 会員一覧
 var HIST=load(K.H,[]); // 対戦履歴（当日分）
 var PAIR_HIST=load(K.PH,{}); // ペア履歴 {pairKey: count}
+var SKIP_CNT=load('nb9sk',{}); // 連続フリー回数 {memberId: count}
 var SPEECH_ON=localStorage.getItem('nb9sp')==='1'; // 読み上げON/OFF
 var SS=load(K.S,{
   n:2,
@@ -507,9 +494,9 @@ function goTab(id){
 // =====================================================
 // 描画
 // =====================================================
-var CAT_IMG={A:'/nyanbad/img/court_a.png',B:'/nyanbad/img/court_b.png',C:'/nyanbad/img/court_c.png',D:'/nyanbad/img/court_d.png'};
-var CAT_FACE='/nyanbad/img/face.png';
-var CAT_FREE='/nyanbad/img/free.png';
+var CAT_IMG={A:'./img/court_a.png',B:'./img/court_b.png',C:'./img/court_c.png',D:'./img/court_d.png'};
+var CAT_FACE='./img/face.png';
+var CAT_FREE='./img/free.png';
 var CAT={A:'🐱',B:'🐈',C:'🐈‍⬛',D:'😺'};
 
 function draw(){
@@ -543,7 +530,7 @@ function drawCourts(){
   if(MB.length<4){
     el.className='cgrid';
     el.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:2rem .8rem;background:var(--surface);border-radius:16px;border:2px dashed var(--border)">'
-      +'<div><img src="/nyanbad/img/good.png" style="width:4rem;height:4rem;object-fit:contain"></div>'
+      +'<div><img src="./img/good.png" style="width:4rem;height:4rem;object-fit:contain"></div>'
       +'<div style="font-weight:700;color:var(--text-mid);margin-top:.4rem">メンバーを4人以上登録するにゃ〜</div>'
       +'<button class="btn ba" style="margin-top:.75rem" onclick="goTab(\'members\')">🐾 追加する</button></div>';
     document.getElementById('free-sec').style.display='none';
@@ -594,7 +581,6 @@ function drawCourts(){
       if(!court.ok){
         var db=mkBtn('🎯抽選','btn ba bsm');db.onclick=function(){doDraw(court.id)};cb.appendChild(db);
         if(court.draw){
-          var rb=mkBtn('🔁','btn bg bsm');rb.onclick=function(){doRedo(court.id)};cb.appendChild(rb);
           var kb=mkBtn('✅確定','btn bs bsm');kb.onclick=function(){doConfirm(court.id)};cb.appendChild(kb);
         }
       }else{
@@ -620,7 +606,7 @@ function makeTeamEl(team,courtId,teamIdx,isConfirmed){
       var icon=document.createElement('span');icon.textContent='🏸';
       icon.style.fontSize='.85em';
       var nm=document.createElement('span');
-      nm.textContent=m.name;
+      nm.textContent=m.name+'('+(PC[m.id]||0)+')';
       nm.className=m.gender==='male'?'name-male':'name-female';
       line.appendChild(icon);line.appendChild(nm);
       // 確定後は交代ボタンを表示
@@ -653,7 +639,9 @@ function drawFree(){
   if(free.length===0){el.innerHTML='<span style="color:var(--text-lt);font-size:.75rem">フリーのメンバーはいません</span>';return;}
   for(var i=0;i<free.length;i++){
     var s=document.createElement('span');s.className='chip';
-    s.textContent=(free[i].gender==='male'?'♂':'♀')+' '+free[i].name;
+    var cnt=PC[free[i].id]||0;
+    s.textContent=(free[i].gender==='male'?'♂':'♀')+' '+free[i].name+'('+cnt+')';
+    s.style.color=free[i].gender==='female'?'#D44040':'';
     el.appendChild(s);
   }
 }
@@ -662,7 +650,7 @@ function drawFree(){
 function drawRoster(){
   var el=document.getElementById('rlist');el.innerHTML='';
   if(RS.length===0){
-    el.innerHTML='<div style="text-align:center;padding:.9rem;color:var(--text-lt)"><img src="/nyanbad/img/good.png" style="width:2.5rem;height:2.5rem;object-fit:contain;vertical-align:middle"> まだ会員がいません</div>';
+    el.innerHTML='<div style="text-align:center;padding:.9rem;color:var(--text-lt)"><img src="./img/good.png" style="width:2.5rem;height:2.5rem;object-fit:contain;vertical-align:middle"> まだ会員がいません</div>';
     return;
   }
   // 参加者を上、欠席を下に表示
@@ -682,21 +670,74 @@ function drawRoster(){
       gi.textContent=member.gender==='male'?'♂':'♀';
       row.appendChild(gi);
 
-      // 名前・レベル
+      // 名前・性別・レベル編集
       var info=document.createElement('div');info.className='crow-info';
-      var nm=document.createElement('div');nm.className='crow-name';nm.style.color=member.gender==='female'?'#D44040':'';nm.style.fontWeight='800';nm.textContent=member.name;
+      var nm=document.createElement('div');nm.className='crow-name';
+      nm.style.color=member.gender==='female'?'#D44040':'';nm.style.fontWeight='800';
+      nm.textContent=member.name;
       info.appendChild(nm);
       var sub=document.createElement('div');sub.className='crow-sub';
+      // 編集ボタン
+      var editBtn=document.createElement('button');
+      editBtn.className='btn bg bxs';editBtn.textContent='✏️';
+      editBtn.style.fontSize='.75rem';
+      (function(mem){
+        editBtn.onclick=function(){
+          // 編集モーダル表示
+          var old=document.getElementById('edit-modal');if(old)document.body.removeChild(old);
+          var modal=document.createElement('div');
+          modal.id='edit-modal';
+          modal.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+          var box=document.createElement('div');
+          box.style.cssText='background:#fff;border-radius:12px;padding:1rem;width:85%;max-width:320px;';
+          var ttl=document.createElement('div');ttl.style.cssText='font-weight:800;margin-bottom:.8rem;';ttl.textContent='会員情報を編集';
+          box.appendChild(ttl);
+          // 名前入力
+          var nlbl=document.createElement('div');nlbl.style.cssText='font-size:.8rem;color:#888;margin-bottom:.25rem;';nlbl.textContent='名前';
+          var ninp=document.createElement('input');ninp.className='inp';ninp.value=mem.name;ninp.maxLength=12;ninp.style.cssText='width:100%;margin-bottom:.6rem;box-sizing:border-box;';
+          box.appendChild(nlbl);box.appendChild(ninp);
+          // 性別選択
+          var glbl=document.createElement('div');glbl.style.cssText='font-size:.8rem;color:#888;margin-bottom:.25rem;';glbl.textContent='性別';
+          var gsel=document.createElement('select');gsel.className='inp';gsel.style.cssText='width:100%;margin-bottom:.6rem;';
+          var gm=document.createElement('option');gm.value='male';gm.textContent='♂ 男性';if(mem.gender==='male')gm.selected=true;
+          var gf=document.createElement('option');gf.value='female';gf.textContent='♀ 女性';if(mem.gender==='female')gf.selected=true;
+          gsel.appendChild(gm);gsel.appendChild(gf);
+          box.appendChild(glbl);box.appendChild(gsel);
+          // レベル選択
+          var llbl=document.createElement('div');llbl.style.cssText='font-size:.8rem;color:#888;margin-bottom:.25rem;';llbl.textContent='レベル';
+          var lsel=document.createElement('select');lsel.className='inp';lsel.style.cssText='width:100%;margin-bottom:.8rem;';
+          var lopts=[['0','🌱 初心'],['1','🔵 初級'],['2','🟡 中級'],['3','🔴 上級']];
+          for(var lo=0;lo<lopts.length;lo++){var lop=document.createElement('option');lop.value=lopts[lo][0];lop.textContent=lopts[lo][1];if((mem.level||0).toString()===lopts[lo][0])lop.selected=true;lsel.appendChild(lop);}
+          box.appendChild(llbl);box.appendChild(lsel);
+          // 保存ボタン
+          var saveBtn=document.createElement('button');saveBtn.className='btn ba';saveBtn.style.cssText='width:100%;margin-bottom:.4rem;';saveBtn.textContent='保存';
+          saveBtn.onclick=function(){
+            var newName=ninp.value.trim();
+            if(!newName){toast('名前を入力してください');return;}
+            for(var ri=0;ri<RS.length;ri++){
+              if(RS[ri].id===mem.id){
+                RS[ri].name=newName;RS[ri].gender=gsel.value;RS[ri].level=parseInt(lsel.value);break;
+              }
+            }
+            for(var mi=0;mi<MB.length;mi++){
+              if(MB[mi].id===mem.id){
+                MB[mi].name=newName;MB[mi].gender=gsel.value;MB[mi].level=parseInt(lsel.value);break;
+              }
+            }
+            document.body.removeChild(modal);
+            saveAll();draw();toast('✅ 情報を更新しました');
+          };
+          var cancelBtn=document.createElement('button');cancelBtn.className='btn';cancelBtn.style.cssText='width:100%;background:#eee;';cancelBtn.textContent='キャンセル';
+          cancelBtn.onclick=function(){document.body.removeChild(modal);};
+          box.appendChild(saveBtn);box.appendChild(cancelBtn);
+          modal.appendChild(box);document.body.appendChild(modal);
+        };
+      })(member);
+      sub.appendChild(editBtn);
+      // レベル表示タグ
       var lv=document.createElement('span');lv.className='tag '+LEVEL_TAGS[member.level||0];
       lv.textContent=LEVELS[member.level||0];
       sub.appendChild(lv);
-      // レベル変更ドロップダウン
-      var rlsel=document.createElement('select');rlsel.className='inp inpsm';rlsel.style.cssText='width:auto;max-width:90px;margin-left:.3rem';
-      var rlopts=[['0','🌱初心'],['1','🔵初級'],['2','🟡中級'],['3','🔴上級']];
-      for(var rli=0;rli<rlopts.length;rli++){var rlo=document.createElement('option');rlo.value=rlopts[rli][0];rlo.textContent=rlopts[rli][1];if((member.level||0).toString()===rlopts[rli][0])rlo.selected=true;rlsel.appendChild(rlo);}
-      (function(mem){rlsel.onchange=function(){for(var ri=0;ri<RS.length;ri++){if(RS[ri].id===mem.id){RS[ri].level=parseInt(this.value);// MBにも反映
-      for(var mi=0;mi<MB.length;mi++){if(MB[mi].id===mem.id){MB[mi].level=RS[ri].level;break;}}break;}}saveAll();draw();toast('レベルを更新しました');};})(member);
-      sub.appendChild(rlsel);
       info.appendChild(sub);
       row.appendChild(info);
 
@@ -733,7 +774,7 @@ function drawRoster(){
 function drawMembers(){
   var el=document.getElementById('mlist');el.innerHTML='';
   if(MB.length===0){
-    el.innerHTML='<div style="text-align:center;padding:.9rem;color:var(--text-lt)"><img src="/nyanbad/img/good.png" style="width:2.5rem;height:2.5rem;object-fit:contain;vertical-align:middle"> まだメンバーがいません</div>';
+    el.innerHTML='<div style="text-align:center;padding:.9rem;color:var(--text-lt)"><img src="./img/good.png" style="width:2.5rem;height:2.5rem;object-fit:contain;vertical-align:middle"> まだメンバーがいません</div>';
     return;
   }
   for(var i=0;i<MB.length;i++){
@@ -1021,10 +1062,23 @@ function genDraw(court){
   var clvInfo=COURT_LEVELS[court.clevel]||COURT_LEVELS['all'];
   var allowedLevels=clvInfo.levels;
 
-  // フリーかつレベル条件を満たすメンバーを抽出
+  // 他コートで抽選中（確定前）のメンバーIDを除外
+  var pendingIds={};
+  for(var pi=0;pi<SS.courts.length;pi++){
+    var pc=SS.courts[pi];
+    if(pc.id===court.id)continue; // 自分のコートは除外しない
+    if(pc.draw&&!pc.ok){
+      // 確定前の抽選結果に含まれるメンバーを除外
+      for(var pt=0;pt<pc.draw.t1.length;pt++)pendingIds[pc.draw.t1[pt].id]=true;
+      for(var pt2=0;pt2<pc.draw.t2.length;pt2++)pendingIds[pc.draw.t2[pt2].id]=true;
+    }
+  }
+
+  // フリーかつレベル条件を満たすメンバーを抽出（他コート抽選中は除外）
   var free=[];
   for(var i=0;i<MB.length;i++){
     if(MB[i].status!=='free')continue;
+    if(pendingIds[MB[i].id])continue; // 他コートで抽選中
     var lv=MB[i].level||0;var ok=false;
     for(var li=0;li<allowedLevels.length;li++){if(allowedLevels[li]===lv){ok=true;break;}}
     if(ok)free.push(MB[i]);
@@ -1142,6 +1196,12 @@ function genDraw(court){
     // 出場回数均等化
     var allIds=[p1[0].id,p1[1].id,p2[0].id,p2[1].id];
     for(var si=0;si<allIds.length;si++)score+=(PC[allIds[si]]||0)*5;
+    // 2回連続フリーの人を優先
+    for(var skj=0;skj<allIds.length;skj++){
+      var sk=SKIP_CNT[allIds[skj]]||0;
+      if(sk>=2)score-=sk*150;
+      else if(sk===1)score-=30;
+    }
     // ランダム要素
     score+=Math.random()*50;
 
@@ -1157,13 +1217,6 @@ function doDraw(id){
   var r=genDraw(c);
   if(!r){var clvInfo=COURT_LEVELS[c.clevel]||COURT_LEVELS['all'];toast('人数が足りないにゃ😿（'+clvInfo.label+'のフリーメンバーが4人未満です）');return;}
   c.draw=r;c.ok=false;saveAll();draw();
-}
-
-function doRedo(id){
-  var c=getC(id);if(!c)return;
-  var prev=c.draw;c.draw=null;
-  var r=genDraw(c);
-  c.draw=r||prev;c.ok=false;saveAll();draw();
 }
 
 function doConfirm(id){
@@ -1189,6 +1242,14 @@ function doConfirm(id){
     t2:c.draw.t2.map(function(m){return{name:m.name,gender:m.gender};}),
     time:timeStr
   });
+  // SKIP_CNT更新：出場した人はリセット、フリーのままの人はインクリメント
+  for(var ski=0;ski<MB.length;ski++){
+    if(MB[ski].status==='playing'){
+      SKIP_CNT[MB[ski].id]=0; // 出場した人はリセット
+    }else if(MB[ski].status==='free'){
+      SKIP_CNT[MB[ski].id]=(SKIP_CNT[MB[ski].id]||0)+1;
+    }
+  }
   saveAll();draw();toast('✅ 試合確定！楽しんでにゃ🏸');
   speakCourt(c.name,c.draw.t1,c.draw.t2);
 }
