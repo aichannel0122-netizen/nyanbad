@@ -968,7 +968,7 @@ function applyRosterToMembers(){
   }
   saveAll();draw();
   toast('✅ '+attending.length+'人をメンバーに反映しました');
-  goTab('members');
+  goTab('home');
 }
 
 // =====================================================
@@ -1242,6 +1242,9 @@ function doConfirm(id){
     t2:c.draw.t2.map(function(m){return{name:m.name,gender:m.gender};}),
     time:timeStr
   });
+  // 履歴タブが開いている場合は即時反映
+  var histPage=document.getElementById('p-history');
+  if(histPage&&!histPage.classList.contains('hidden')) drawHistory();
   // SKIP_CNT更新：出場した人はリセット、フリーのままの人はインクリメント
   for(var ski=0;ski<MB.length;ski++){
     if(MB[ski].status==='playing'){
@@ -1406,6 +1409,7 @@ if('serviceWorker' in navigator){
 }
 
 goTab('home');
+updateSpeechBtn();
 </script>
 </body>
 </html>
