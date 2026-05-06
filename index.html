@@ -1402,11 +1402,12 @@ function updateSpeechBtn(){
 
 // 音声読み上げ
 function speakCourt(courtName,t1,t2){
-  if(!SPEECH_ON)return;
-  if(!window.speechSynthesis)return;
+  if(!SPEECH_ON){toast('🔇 読み上げOFF');return;}
+  if(!window.speechSynthesis){toast('❌ 音声非対応');return;}
   var t1names=t1.map(function(m){return m.name;}).join('、');
   var t2names=t2.map(function(m){return m.name;}).join('、');
   var text=courtName+'、'+t1names+'、対、'+t2names;
+  toast('🔊 読み上げ中: '+text);
   window.speechSynthesis.cancel();
   setTimeout(function(){
     var utt=new SpeechSynthesisUtterance(text);
