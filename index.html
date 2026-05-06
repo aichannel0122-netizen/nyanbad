@@ -1257,14 +1257,14 @@ function doConfirm(id){
       SKIP_CNT[MB[ski].id]=(SKIP_CNT[MB[ski].id]||0)+1;
     }
   }
+  // 読み上げを最初に（iOSはユーザー操作の直後でないと音声が鳴らない）
+  speakCourt(speakCourtName,speakT1,speakT2);
   saveAll();
   draw();
   // 履歴タブが開いている場合は即時反映
   var histPage=document.getElementById('p-history');
   if(histPage&&!histPage.classList.contains('hidden')) drawHistory();
   toast('✅ 試合確定！楽しんでにゃ🏸');
-  // draw()後に読み上げ（保存済みの変数を使う）
-  speakCourt(speakCourtName,speakT1,speakT2);
 }
 
 function doFinish(id){
@@ -1404,14 +1404,16 @@ function updateSpeechBtn(){
 function speakCourt(courtName,t1,t2){
   if(!SPEECH_ON)return;
   if(!window.speechSynthesis)return;
-  window.speechSynthesis.cancel();
   var t1names=t1.map(function(m){return m.name;}).join('、');
   var t2names=t2.map(function(m){return m.name;}).join('、');
   var text=courtName+'、'+t1names+'、対、'+t2names;
-  var utt=new SpeechSynthesisUtterance(text);
-  utt.lang='ja-JP';
-  utt.rate=0.9;
-  window.speechSynthesis.speak(utt);
+  window.speechSynthesis.cancel();
+  setTimeout(function(){
+    var utt=new SpeechSynthesisUtterance(text);
+    utt.lang='ja-JP';
+    utt.rate=0.9;
+    window.speechSynthesis.speak(utt);
+  },100);
 }
 
 if('serviceWorker' in navigator){
