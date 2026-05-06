@@ -846,6 +846,21 @@ function drawMembers(){
       el.appendChild(row);
     })(i);
   }
+
+  // 固定ペア用セレクトボックスを更新
+  var pa=document.getElementById('pa');var pb=document.getElementById('pb');
+  if(pa&&pb){
+    var paVal=pa.value;var pbVal=pb.value;
+    pa.innerHTML='<option value="">選択…</option>';
+    pb.innerHTML='<option value="">選択…</option>';
+    for(var si=0;si<MB.length;si++){
+      var op1=document.createElement('option');op1.value=MB[si].id;op1.textContent=MB[si].name;
+      var op2=document.createElement('option');op2.value=MB[si].id;op2.textContent=MB[si].name;
+      if(MB[si].id===paVal)op1.selected=true;
+      if(MB[si].id===pbVal)op2.selected=true;
+      pa.appendChild(op1);pb.appendChild(op2);
+    }
+  }
 }
 
 // 固定ペア
