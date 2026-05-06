@@ -506,10 +506,10 @@ function draw(){
   drawHeader();drawCourts();drawFree();
   drawRoster();drawMembers();drawPairs();
   drawCourtSettings();drawCount();drawCourtNBtns();
-  document.getElementById('mcnt').textContent=MB.length;
-  document.getElementById('rcnt').textContent=RS.length;
+  var mcntEl=document.getElementById('mcnt');if(mcntEl)mcntEl.textContent=MB.length;
+  var rcntEl=document.getElementById('rcnt');if(rcntEl)rcntEl.textContent=RS.length;
   var attCnt=0;for(var i=0;i<RS.length;i++) if(RS[i].attending) attCnt++;
-  document.getElementById('att-cnt').textContent=attCnt;
+  var attEl=document.getElementById('att-cnt');if(attEl)attEl.textContent=attCnt;
   drawPairSelects();
 }
 
@@ -847,19 +847,21 @@ function drawMembers(){
     })(i);
   }
 
-  // 固定ペア用セレクトボックスを更新
+  updatePairSelects();
+}
+
+function updatePairSelects(){
   var pa=document.getElementById('pa');var pb=document.getElementById('pb');
-  if(pa&&pb){
-    var paVal=pa.value;var pbVal=pb.value;
-    pa.innerHTML='<option value="">選択…</option>';
-    pb.innerHTML='<option value="">選択…</option>';
-    for(var si=0;si<MB.length;si++){
-      var op1=document.createElement('option');op1.value=MB[si].id;op1.textContent=MB[si].name;
-      var op2=document.createElement('option');op2.value=MB[si].id;op2.textContent=MB[si].name;
-      if(MB[si].id===paVal)op1.selected=true;
-      if(MB[si].id===pbVal)op2.selected=true;
-      pa.appendChild(op1);pb.appendChild(op2);
-    }
+  if(!pa||!pb)return;
+  var paVal=pa.value;var pbVal=pb.value;
+  pa.innerHTML='<option value="">選択…</option>';
+  pb.innerHTML='<option value="">選択…</option>';
+  for(var si=0;si<MB.length;si++){
+    var op1=document.createElement('option');op1.value=MB[si].id;op1.textContent=MB[si].name;
+    var op2=document.createElement('option');op2.value=MB[si].id;op2.textContent=MB[si].name;
+    if(MB[si].id===paVal)op1.selected=true;
+    if(MB[si].id===pbVal)op2.selected=true;
+    pa.appendChild(op1);pb.appendChild(op2);
   }
 }
 
