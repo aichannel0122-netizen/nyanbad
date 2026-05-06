@@ -471,24 +471,27 @@ function goTab(id){
   var pages=['home','roster','members','settings','history'];
   for(var i=0;i<pages.length;i++){
     var el=document.getElementById('p-'+pages[i]);
-    el.classList.remove('on');
-    el.classList.add('hidden');
+    if(el){el.style.display='none';el.classList.remove('on');el.classList.add('hidden');}
   }
   var activeEl=document.getElementById('p-'+id);
-  activeEl.classList.remove('hidden');
-  activeEl.classList.add('on');
+  if(activeEl){
+    activeEl.classList.remove('hidden');
+    activeEl.classList.add('on');
+    // タブレット横向き時のhomeページ表示制御
+    var isTablet=window.innerWidth>=768;
+    if(id==='home'&&isTablet) activeEl.style.display='flex';
+    else activeEl.style.display='block';
+  }
   var btns=document.querySelectorAll('.tb');
   for(var i=0;i<btns.length;i++) btns[i].classList.remove('on');
   var labels={home:'ホーム',roster:'会員',members:'メンバー',history:'履歴',settings:'設定'};
   for(var i=0;i<btns.length;i++){
     if(btns[i].textContent.indexOf(labels[id])>=0) btns[i].classList.add('on');
   }
-  // タブレット横向き時のhomeページ表示制御
-  var isTablet=window.innerWidth>=768;
-  var homeEl=document.getElementById('p-home');
-  if(id==='home'&&isTablet) homeEl.style.display='flex';
-  draw();
-  if(id==='history') drawHistory();
+  // 描画（historyタブ以外）
+  if(id!=='history') draw();
+  else drawHistory();
+  updateSpeechBtn();
 }
 
 // =====================================================
@@ -1233,28 +1236,35 @@ function doConfirm(id){
   var t1=c.draw.t1,t2=c.draw.t2;
   if(t1.length===2){var pk1=pairKey(t1[0].id,t1[1].id);PAIR_HIST[pk1]=(PAIR_HIST[pk1]||0)+1;}
   if(t2.length===2){var pk2=pairKey(t2[0].id,t2[1].id);PAIR_HIST[pk2]=(PAIR_HIST[pk2]||0)+1;}
+  // 読み上げ用に名前を先に保存（draw()前に取得）
+  var speakT1=t1.slice();
+  var speakT2=t2.slice();
+  var speakCourtName=c.name;
   // 対戦履歴に追加
   var now=new Date();
   var timeStr=(now.getHours()<10?'0':'')+now.getHours()+':'+(now.getMinutes()<10?'0':'')+now.getMinutes();
   HIST.push({
     courtName:c.name,
-    t1:c.draw.t1.map(function(m){return{name:m.name,gender:m.gender};}),
-    t2:c.draw.t2.map(function(m){return{name:m.name,gender:m.gender};}),
+    t1:t1.map(function(m){return{name:m.name,gender:m.gender};}),
+    t2:t2.map(function(m){return{name:m.name,gender:m.gender};}),
     time:timeStr
   });
-  // 履歴タブが開いている場合は即時反映
-  var histPage=document.getElementById('p-history');
-  if(histPage&&!histPage.classList.contains('hidden')) drawHistory();
   // SKIP_CNT更新：出場した人はリセット、フリーのままの人はインクリメント
   for(var ski=0;ski<MB.length;ski++){
     if(MB[ski].status==='playing'){
-      SKIP_CNT[MB[ski].id]=0; // 出場した人はリセット
+      SKIP_CNT[MB[ski].id]=0;
     }else if(MB[ski].status==='free'){
       SKIP_CNT[MB[ski].id]=(SKIP_CNT[MB[ski].id]||0)+1;
     }
   }
-  saveAll();draw();toast('✅ 試合確定！楽しんでにゃ🏸');
-  speakCourt(c.name,c.draw.t1,c.draw.t2);
+  saveAll();
+  draw();
+  // 履歴タブが開いている場合は即時反映
+  var histPage=document.getElementById('p-history');
+  if(histPage&&!histPage.classList.contains('hidden')) drawHistory();
+  toast('✅ 試合確定！楽しんでにゃ🏸');
+  // draw()後に読み上げ（保存済みの変数を使う）
+  speakCourt(speakCourtName,speakT1,speakT2);
 }
 
 function doFinish(id){
