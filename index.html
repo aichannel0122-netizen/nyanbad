@@ -1245,15 +1245,15 @@ function doConfirm(id){
   for(var i=0;i<c.draw.t1.length;i++) ids.push(c.draw.t1[i].id);
   for(var i=0;i<c.draw.t2.length;i++) ids.push(c.draw.t2[i].id);
   c.ok=true;c.pids=ids;
+  // ステータスをplayingに（出場回数は終了時にカウント）
   for(var i=0;i<ids.length;i++){
     for(var mi=0;mi<MB.length;mi++){if(MB[mi].id===ids[i]){MB[mi].status='playing';break;}}
-    PC[ids[i]]=(PC[ids[i]]||0)+1;
   }
   // ペア履歴を更新
   var t1=c.draw.t1,t2=c.draw.t2;
   if(t1.length===2){var pk1=pairKey(t1[0].id,t1[1].id);PAIR_HIST[pk1]=(PAIR_HIST[pk1]||0)+1;}
   if(t2.length===2){var pk2=pairKey(t2[0].id,t2[1].id);PAIR_HIST[pk2]=(PAIR_HIST[pk2]||0)+1;}
-  // 読み上げ用に名前を先に保存（draw()前に取得）
+  // 読み上げ用に名前を先に保存
   var speakT1=t1.slice();
   var speakT2=t2.slice();
   var speakCourtName=c.name;
@@ -1266,7 +1266,7 @@ function doConfirm(id){
     t2:t2.map(function(m){return{name:m.name,gender:m.gender};}),
     time:timeStr
   });
-  // SKIP_CNT更新：出場した人はリセット、フリーのままの人はインクリメント
+  // SKIP_CNT更新：選ばれた人はリセット、フリーのままの人はインクリメント
   for(var ski=0;ski<MB.length;ski++){
     if(MB[ski].status==='playing'){
       SKIP_CNT[MB[ski].id]=0;
@@ -1274,11 +1274,9 @@ function doConfirm(id){
       SKIP_CNT[MB[ski].id]=(SKIP_CNT[MB[ski].id]||0)+1;
     }
   }
-  // 読み上げを最初に（iOSはユーザー操作の直後でないと音声が鳴らない）
   speakCourt(speakCourtName,speakT1,speakT2);
   saveAll();
   draw();
-  // 履歴タブが開いている場合は即時反映
   var histPage=document.getElementById('p-history');
   if(histPage&&!histPage.classList.contains('hidden')) drawHistory();
   toast('✅ 試合確定！楽しんでにゃ🏸');
@@ -1286,8 +1284,10 @@ function doConfirm(id){
 
 function doFinish(id){
   var c=getC(id);if(!c)return;
+  // 終了時に最終メンバーの出場回数をカウント
   for(var i=0;i<c.pids.length;i++){
-    for(var mi=0;mi<MB.length;mi++){if(MB[mi].id===c.pids[i]){MB[mi].status='free';break}}
+    PC[c.pids[i]]=(PC[c.pids[i]]||0)+1;
+    for(var mi=0;mi<MB.length;mi++){if(MB[mi].id===c.pids[i]){MB[mi].status='free';break;}}
   }
   c.draw=null;c.ok=false;c.pids=[];saveAll();draw();toast('🏁 試合終了！お疲れ様でした🐱');
 }
@@ -1301,54 +1301,126 @@ function resetAll(){
 // 確定後メンバー入れ替え
 function doSwap(courtId,teamIdx,memberIdx){
   var c=getC(courtId);if(!c||!c.ok)return;
-  // フリーメンバー一覧でモーダル表示
-  var freeMB=MB.filter(function(m){return m.status==='free';});
-  if(freeMB.length===0){toast('フリーのメンバーがいません');return;}
-  // 対象メンバー
   var team=teamIdx===1?c.draw.t1:c.draw.t2;
   var target=team[memberIdx];
-  // 選択ダイアログを表示
+
+  // 候補リストを作成
+  // カテゴリ1: フリーの人
+  // カテゴリ2: 同じコートの他チームの人（ペア組み替え）
+  // カテゴリ3: 他コートの確定済みメンバー（スワップ）
+  var candidates=[];
+
+  // カテゴリ1: フリー
+  for(var i=0;i<MB.length;i++){
+    if(MB[i].status==='free') candidates.push({m:MB[i],type:'free',label:'フリー',courtRef:null,tIdx:0,mIdx:0});
+  }
+
+  // カテゴリ2: 同コートの別チームの人
+  var otherTeam=teamIdx===1?c.draw.t2:c.draw.t1;
+  var otherTIdx=teamIdx===1?2:1;
+  for(var oi=0;oi<otherTeam.length;oi++){
+    if(otherTeam[oi].id!==target.id)
+      candidates.push({m:otherTeam[oi],type:'same',label:'同コート',courtRef:c,tIdx:otherTIdx,mIdx:oi});
+  }
+
+  // カテゴリ3: 他コートの確定済みメンバー
+  for(var ci=0;ci<SS.courts.length;ci++){
+    var oc=SS.courts[ci];
+    if(oc.id===courtId||!oc.ok||!oc.draw)continue;
+    for(var ti=1;ti<=2;ti++){
+      var ot=ti===1?oc.draw.t1:oc.draw.t2;
+      for(var omi=0;omi<ot.length;omi++){
+        candidates.push({m:ot[omi],type:'other',label:oc.name,courtRef:oc,tIdx:ti,mIdx:omi});
+      }
+    }
+  }
+
+  if(candidates.length===0){toast('交代できるメンバーがいません');return;}
+
+  // モーダル表示
   var sel=document.getElementById('swap-modal');
   if(sel)document.body.removeChild(sel);
   var modal=document.createElement('div');
   modal.id='swap-modal';
   modal.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
   var box=document.createElement('div');
-  box.style.cssText='background:#fff;border-radius:12px;padding:1rem;width:85%;max-width:320px;';
+  box.style.cssText='background:#fff;border-radius:12px;padding:1rem;width:88%;max-width:340px;max-height:80vh;overflow-y:auto;';
   var title=document.createElement('div');
-  title.style.cssText='font-weight:800;margin-bottom:.7rem;font-size:.95rem;';
-  title.textContent='「'+target.name+'」と交代するメンバーを選択';
+  title.style.cssText='font-weight:800;margin-bottom:.7rem;font-size:.9rem;';
+  title.textContent='「'+target.name+'」と交代・入れ替え';
   box.appendChild(title);
-  for(var i=0;i<freeMB.length;i++){
-    (function(fm){
+
+  // カテゴリごとに見出しを付けて表示
+  var prevType='';
+  for(var ci2=0;ci2<candidates.length;ci2++){
+    (function(cand){
+      // カテゴリ見出し
+      if(cand.type!==prevType){
+        var lbl=document.createElement('div');
+        lbl.style.cssText='font-size:.72rem;color:#aaa;font-weight:700;margin:.4rem 0 .2rem;';
+        if(cand.type==='free')lbl.textContent='── フリーの人';
+        else if(cand.type==='same')lbl.textContent='── 同コート（ペア組み替え）';
+        else lbl.textContent='── '+cand.label+'（スワップ）';
+        box.appendChild(lbl);
+        prevType=cand.type;
+      }
       var btn=document.createElement('button');
-      btn.style.cssText='display:block;width:100%;text-align:left;padding:.5rem .7rem;margin-bottom:.3rem;border-radius:8px;border:1px solid #ddd;background:#f9f6f2;cursor:pointer;font-size:.9rem;';
-      btn.style.color=fm.gender==='female'?'#D44040':'#1A1A1A';
-      btn.textContent=(fm.gender==='male'?'♂':'♀')+' '+fm.name;
+      btn.style.cssText='display:block;width:100%;text-align:left;padding:.45rem .7rem;margin-bottom:.25rem;border-radius:8px;border:1px solid #ddd;background:#f9f6f2;cursor:pointer;font-size:.88rem;';
+      btn.style.color=cand.m.gender==='female'?'#D44040':'#1A1A1A';
+      btn.textContent=(cand.m.gender==='male'?'♂':'♀')+' '+cand.m.name;
       btn.onclick=function(){
-        // 入れ替え実行
-        fm.status='playing';target.status='free';
-        // team配列を更新
-        var targetTeam=teamIdx===1?c.draw.t1:c.draw.t2;
-        targetTeam[memberIdx]=fm;
-        // pidsを更新
-        var newPids=[];
-        for(var pi=0;pi<c.draw.t1.length;pi++)newPids.push(c.draw.t1[pi].id);
-        for(var pi2=0;pi2<c.draw.t2.length;pi2++)newPids.push(c.draw.t2[pi2].id);
-        c.pids=newPids;
-        // MBのステータスを更新
-        for(var mi=0;mi<MB.length;mi++){
-          if(MB[mi].id===fm.id)MB[mi].status='playing';
-          if(MB[mi].id===target.id)MB[mi].status='free';
-        }
         document.body.removeChild(modal);
-        saveAll();draw();toast('✅ '+target.name+'→'+fm.name+' に交代しました');
+        if(cand.type==='free'){
+          // フリーの人と交代
+          var targetTeam=teamIdx===1?c.draw.t1:c.draw.t2;
+          targetTeam[memberIdx]=cand.m;
+          var newPids=[];
+          for(var p=0;p<c.draw.t1.length;p++)newPids.push(c.draw.t1[p].id);
+          for(var p2=0;p2<c.draw.t2.length;p2++)newPids.push(c.draw.t2[p2].id);
+          c.pids=newPids;
+          for(var mi=0;mi<MB.length;mi++){
+            if(MB[mi].id===cand.m.id)MB[mi].status='playing';
+            if(MB[mi].id===target.id)MB[mi].status='free';
+          }
+          toast('✅ '+target.name+'→'+cand.m.name+' に交代');
+        }else if(cand.type==='same'){
+          // 同コート内ペア組み替え
+          var myTeam=teamIdx===1?c.draw.t1:c.draw.t2;
+          var opTeam=teamIdx===1?c.draw.t2:c.draw.t1;
+          myTeam[memberIdx]=cand.m;
+          opTeam[cand.mIdx]=target;
+          var newPids2=[];
+          for(var p3=0;p3<c.draw.t1.length;p3++)newPids2.push(c.draw.t1[p3].id);
+          for(var p4=0;p4<c.draw.t2.length;p4++)newPids2.push(c.draw.t2[p4].id);
+          c.pids=newPids2;
+          toast('✅ ペアを組み替えました');
+        }else{
+          // 他コートスワップ
+          var oc2=cand.courtRef;
+          var myTeam2=teamIdx===1?c.draw.t1:c.draw.t2;
+          var ocTeam=cand.tIdx===1?oc2.draw.t1:oc2.draw.t2;
+          myTeam2[memberIdx]=cand.m;
+          ocTeam[cand.mIdx]=target;
+          // 両コートのpids更新
+          var np1=[];
+          for(var p5=0;p5<c.draw.t1.length;p5++)np1.push(c.draw.t1[p5].id);
+          for(var p6=0;p6<c.draw.t2.length;p6++)np1.push(c.draw.t2[p6].id);
+          c.pids=np1;
+          var np2=[];
+          for(var p7=0;p7<oc2.draw.t1.length;p7++)np2.push(oc2.draw.t1[p7].id);
+          for(var p8=0;p8<oc2.draw.t2.length;p8++)np2.push(oc2.draw.t2[p8].id);
+          oc2.pids=np2;
+          toast('✅ '+target.name+'↔'+cand.m.name+' をスワップ');
+        }
+        saveAll();draw();
       };
       box.appendChild(btn);
-    })(freeMB[i]);
+    })(candidates[ci2]);
+    prevType=candidates[ci2].type;
   }
+
   var cancel=document.createElement('button');
-  cancel.style.cssText='width:100%;padding:.5rem;margin-top:.3rem;border-radius:8px;border:1px solid #ddd;background:#eee;cursor:pointer;';
+  cancel.style.cssText='width:100%;padding:.5rem;margin-top:.4rem;border-radius:8px;border:1px solid #ddd;background:#eee;cursor:pointer;';
   cancel.textContent='キャンセル';
   cancel.onclick=function(){document.body.removeChild(modal);};
   box.appendChild(cancel);
