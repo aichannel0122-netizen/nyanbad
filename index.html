@@ -1108,10 +1108,10 @@ function genDraw(court){
   var mode=court.mode;
   var lastKey=court.draw?court.draw.key:null;
 
-  // 全体の出場回数
-  var allCounts=MB.map(function(m){return PC[m.id]||0;});
-  var globalMax=allCounts.length>0?Math.max.apply(null,allCounts):0;
-  var globalMin=allCounts.length>0?Math.min.apply(null,allCounts):0;
+  // 出場回数はフリーメンバーのみで比較（試合中は抽選対象外なので除外）
+  var freeCounts=free.map(function(m){return PC[m.id]||0;});
+  var globalMax=freeCounts.length>0?Math.max.apply(null,freeCounts):0;
+  var globalMin=freeCounts.length>0?Math.min.apply(null,freeCounts):0;
   var countGap=globalMax-globalMin;
 
   // 固定ペアをfrееから抽出（両者がフリーにいる場合のみ）
@@ -1213,9 +1213,13 @@ function genDraw(court){
     score+=getPairCount(p2[0],p2[1])*300;
     // 固定ペア同士の対戦ペナルティ（避けるが絶対NGではない）
     if(isFixedPair(p1[0],p1[1])&&isFixedPair(p2[0],p2[1]))score+=200;
-    // 出場回数均等化
+    // 出場回数均等化（試合中は+1補正）
     var allIds=[p1[0].id,p1[1].id,p2[0].id,p2[1].id];
-    for(var si=0;si<allIds.length;si++)score+=(PC[allIds[si]]||0)*5;
+    for(var si=0;si<allIds.length;si++){
+      var cnt=PC[allIds[si]]||0;
+      // フリーメンバーの中で試合中ステータスはいないが念のり
+      score+=cnt*5;
+    }
     // 2回連続フリーの人を優先
     for(var skj=0;skj<allIds.length;skj++){
       var sk=SKIP_CNT[allIds[skj]]||0;
@@ -1337,6 +1341,7 @@ function doSwap(courtId,teamIdx,memberIdx){
 
   if(candidates.length===0){toast('交代できるメンバーがいません');return;}
 
+
   // モーダル表示
   var sel=document.getElementById('swap-modal');
   if(sel)document.body.removeChild(sel);
@@ -1367,7 +1372,7 @@ function doSwap(courtId,teamIdx,memberIdx){
       var btn=document.createElement('button');
       btn.style.cssText='display:block;width:100%;text-align:left;padding:.45rem .7rem;margin-bottom:.25rem;border-radius:8px;border:1px solid #ddd;background:#f9f6f2;cursor:pointer;font-size:.88rem;';
       btn.style.color=cand.m.gender==='female'?'#D44040':'#1A1A1A';
-      btn.textContent=(cand.m.gender==='male'?'♂':'♀')+' '+cand.m.name;
+      btn.textContent=(cand.m.gender==='male'?'♂':'♀')+' '+cand.m.name+'('+(PC[cand.m.id]||0)+')';
       btn.onclick=function(){
         document.body.removeChild(modal);
         if(cand.type==='free'){
